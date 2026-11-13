@@ -1,347 +1,152 @@
-# Kloud Kart: Data Engineering Strategy and Implementation Roadmap
-
-![Project Status](https://img.shields.io/badge/Status-Planning%20%26%20Assessment-blue)
-![Domain](https://img.shields.io/badge/Domain-Data%20Engineering-orange)
-![Architecture](https://img.shields.io/badge/Architecture-Proposed-purple)
-
-## Table of Contents
-
-- [Project Overview](#project-overview)
-- [Business Context](#business-context)
-- [Project Objectives](#project-objectives)
-- [Proposed Architecture](#proposed-architecture)
-- [Technology Strategy](#technology-strategy)
-- [Implementation Roadmap](#implementation-roadmap)
-- [Built Improvement](#built-improvement)
-- [Data Quality and Governance](#data-quality-and-governance)
-- [Architecture Decision Records](#architecture-decision-records)
-- [Success Metrics](#success-metrics)
-- [Risks and Constraints](#risks-and-constraints)
-- [Repository Structure](#repository-structure)
-- [Future Direction](#future-direction)
+# Kloud Kart Data Engineering Strategy
 
 ## Project Overview
 
-Kloud Kart is an e-commerce business based in Accra, Ghana, processing approximately 4,000 orders per day. As the business grows and prepares for potential expansion into Nigeria, its current reporting processes are becoming increasingly difficult to manage reliably.
+This project presents a practical data engineering strategy for Kloud Kart, an Accra-based e-commerce business processing approximately 4,000 orders per day.
 
-This project presents a practical data engineering strategy to improve reporting reliability, protect the live website, strengthen customer-data governance, and establish a foundation for future analytics.
+Kloud Kart currently uses a MySQL production database of approximately 40 GB. Large reporting exports have coincided with website slowdowns, Operations and Finance produce inconsistent figures, and customer-list copies maintained by Marketing are not centrally tracked.
 
-The proposed approach prioritises operational stability, data quality, and cost control before introducing an expensive data warehouse or advanced machine learning solutions.
+The objective is to establish a reliable, secure, and cost-controlled reporting foundation without introducing unnecessary technical complexity.
 
-**The central recommendation is to establish a reliable, controlled reporting environment before investing in advanced analytics.**
+## Business Problems
 
-## Business Context
+- **Production performance:** Large reporting exports may compete with live application workloads.
+- **Inconsistent reporting:** Operations and Finance report different figures.
+- **Customer-data governance:** Customer-list copies are not centrally tracked.
+- **Manual reporting:** Monday reports require repeated CSV exports and manual reconstruction.
+- **Inventory freshness:** Standard daily reports may not reflect the latest stock changes.
+- **Future growth:** The architecture must be assessed against a provisional 15–20% annual order-growth assumption.
 
-Kloud Kart currently operates a MySQL database containing operational information, including orders, inventory, and customer accounts. Reporting workloads share infrastructure with the live website.
+The growth figure is a planning assumption to validate, not a confirmed forecast.
 
-The business faces several challenges:
+## Recommended Architecture
 
-- Monday exports involve hundreds of thousands of rows and have coincided with website slowdowns.
-- Operations and Finance sometimes produce inconsistent figures.
-- Marketing maintains customer-list copies that are not centrally tracked.
-- Reporting depends heavily on manual exports and spreadsheet processing.
-- Customer-data deletion and retention processes require stronger controls.
-- Management and investors want a clear data strategy to support business growth.
+The proposed target architecture uses a small managed cloud data warehouse, controlled extraction, SQL transformations, automated quality checks, and a reporting layer.
 
-The company also has important constraints:
-
-- The live website and operational database must remain available.
-- Inventory information must remain sufficiently fresh to prevent overselling.
-- Other business reporting can generally refresh daily.
-- Only two data hires are permitted.
-- The existing PHP/MySQL developer has limited capacity.
-- Management must balance technical improvements with operating costs.
-
-## Project Objectives
-
-The project aims to:
-
-1. Separate reporting workloads from the live production environment.
-2. Establish consistent business definitions and reporting procedures.
-3. Improve the accuracy and reproducibility of Operations and Finance reports.
-4. Introduce basic customer-data copy tracking and governance controls.
-5. Reduce unnecessary manual work through targeted automation.
-6. Establish measurable outcomes before approving larger technology investments.
-7. Prepare the business for future warehousing and demand forecasting when justified.
-
-## Proposed Architecture
-
-The following diagram represents the **proposed target architecture**, not a system that has already been deployed.
-
-```mermaid
-flowchart TD
-    A["E-commerce Website"] --> B[("Production MySQL Database")]
-    B --> C["Controlled Replication or Data Transfer"]
-    C --> D[("Separate Reporting Environment")]
-    D --> E["SQL and Python Transformations"]
-    E --> F["Data Quality Checks"]
-    F --> G["Standardised Business Reports"]
-    G --> H["Operations"]
-    G --> I["Finance"]
-    G --> J["Management"]
-
-    K["Access Controls and Customer Data Governance"] -.-> B
-    K -.-> D
-    L["Monitoring and Validation"] -.-> C
-    L -.-> F
+```text
+Production MySQL
+       |
+       v
+Controlled extraction
+Initial snapshot + incremental changes
+       |
+       v
+Data protection and access controls
+       |
+       v
+Managed cloud data warehouse
+       |
+       v
+SQL transformations and quality checks
+       |
+       v
+Approved reporting tables
+       |
+       v
+Operations, Finance and management
 ```
 
-### Architecture Principles
+Inventory stock-count changes are the single proposed near-real-time exception. An appropriate change-data-capture mechanism should update the inventory reporting view, with freshness and failure monitoring.
 
-- **Protect production:** Reporting must not place unnecessary load on the live website and operational database.
-- **Preserve inventory freshness:** Inventory-related processes must meet agreed freshness requirements.
-- **Control access:** Customer data must only be accessible to authorised personnel.
-- **Validate before reporting:** Business reports should pass agreed quality checks before distribution.
-- **Keep costs proportionate:** Begin with a separate reporting environment before committing to a more expensive platform.
-- **Design for growth:** Make future integration with a data warehouse possible without requiring an immediate platform migration.
+Production remains authoritative for checkout, stock reservation, and operational inventory decisions.
 
-## Technology Strategy
+## Processing Strategy
 
-| Component | Proposed approach | Purpose |
-|---|---|---|
-| Operational database | Existing MySQL | Continue supporting live transactions |
-| Reporting infrastructure | Approved second server or read replica | Separate reporting workloads from production |
-| Data processing | SQL and Python | Transform and prepare reporting datasets |
-| Data validation | SQL/Python checks | Identify missing, duplicated, or inconsistent records |
-| Business reporting | Standardised reports and existing spreadsheet tools | Provide consistent operational and financial figures |
-| Version control | Git and GitHub | Track changes to documentation, scripts, and decisions |
-| Future data warehouse | Evaluate Snowflake or BigQuery | Support larger analytical workloads when justified |
-| Future analytics | Assess forecasting after data quality improves | Support evidence-based inventory planning |
+### Extraction
 
-Technology selection should be based on actual requirements, expected workload, operating costs, team capability, and maintenance effort.
+- Establish a consistent initial snapshot.
+- Use incremental extraction for subsequent changes.
+- Assess change-data capture if reliable incremental extraction cannot be achieved using available source fields.
+- Monitor load completion, failures, duplicate processing, and reconciliation results.
+
+### Transformation
+
+The proposed approach is hybrid ELT:
+
+- Exclude or mask unnecessary personal identifiers before analytical landing where feasible.
+- Apply approved access and retention controls to data that must be retained.
+- Use SQL transformations to standardise orders, payments, cancellations, refunds, and inventory reporting.
+- Validate results before publishing reports.
+
+### Refresh Frequency
+
+| Data domain | Proposed refresh |
+|---|---|
+| Orders and payments | Daily batch |
+| Standard management reporting | Daily batch |
+| Customer reporting | Daily batch, subject to approved data controls |
+| Inventory reporting view | Near real time |
+| Production checkout and stock reservation | Operational system remains authoritative |
+
+## Project Deliverables
+
+| Deliverable | Purpose |
+|---|---|
+| `Situation_Diagnosis_Kloud_Kart.md` | Ranked business and technical risks, assumptions, cost estimates, and data-quality dimensions |
+| `Kloud_Kart_Recommendation.md` | Recommended architecture, extraction strategy, processing approach, and ownership |
+| `Kloud_Kart_Implementation_Roadmap.md` | Quarterly implementation plan with verifiable outcomes |
+| `decisions/` | Architecture Decision Records documenting decisions and rejected alternatives |
+| `improvement/` | Additional operational controls and the proposed FinOps improvement |
+| `Kloud-Kart-Board-Presentation.pptx` | Executive-level communication of the findings and recommendations |
+
+## Data Quality and Reporting Controls
+
+Every data load should be checked across six dimensions:
+
+1. **Completeness:** Are required records and fields present?
+2. **Accuracy:** Do values match the source and expected business rules?
+3. **Consistency:** Are definitions and calculations consistent across reports?
+4. **Timeliness:** Did the data arrive within the agreed window?
+5. **Validity:** Do values meet accepted formats and rules?
+6. **Uniqueness:** Are unintended duplicate records present?
+
+Failed checks should be visible, assigned to an owner, and resolved before affected outputs are published.
+
+Revenue definitions must be agreed with Finance and Operations, including the treatment of cancellations, refunds, failed payments, and reporting cut-off times.
+
+## Customer Data Protection
+
+The strategy includes an inventory of customer-data copies, named owners, access controls, retention rules, and documented handling of relevant customer requests.
+
+The investigation must cover applicable production data, exports, spreadsheets, emailed files, reporting stores, and backups. Deletion from one location must not be assumed to remove every copy.
+
+Applicable obligations under Ghana's Data Protection Act, 2012 (Act 843), should be confirmed with the designated privacy or compliance owner.
 
 ## Implementation Roadmap
 
-The roadmap is organised into four quarters. Each quarter has outcomes that Nana Adjei, Head of Operations, can verify.
+- **Q1 — Investigate and agree:** Assign complaint ownership, investigate slowdowns, establish baselines, and approve business definitions.
+- **Q2 — Protect and build:** Separate reporting from production where appropriate, configure the warehouse, and implement controlled extraction.
+- **Q3 — Automate and validate:** Deliver daily reporting pipelines, inventory change capture, and automated data-quality checks.
+- **Q4 — Measure and optimise:** Compare outcomes against baselines, review costs and capacity, and decide whether forecasting is justified.
 
-### Quarter 1: Investigate and Plan
+## Ownership
 
-**Actions**
-- Investigate the customer-data complaint and establish the appropriate response plan.
-- Investigate the reported website slowdowns during Monday exports.
-- Measure current reporting effort, reconciliation work, and website performance.
-- Agree on common business definitions with Operations and Finance.
-- Compare the costs and operational implications of a second server and a read replica.
+- **Head of Operations:** Business priorities and approval of core business definitions.
+- **Data Engineer:** Extraction, warehouse reliability, monitoring, and technical data controls.
+- **Analytics Engineer / BI Developer:** SQL transformations, reporting logic, and reconciliation.
+- **PHP/MySQL developer:** Production application support and database integration.
+- **Designated privacy or compliance owner:** Customer-data complaint handling and applicable obligations.
 
-**Verifiable outcomes**
-- Documented complaint investigation and response plan.
-- Written findings on reporting-related website slowdowns.
-- Baseline reporting and reconciliation measurements.
-- Approved business definitions.
-- Costed proposal for separating reporting workloads.
+## Cost Management
 
-### Quarter 2: Protect and Control
+The proposed FinOps guardrail introduces an approved monthly budget, cost alerts, monthly spending reviews, and measures such as cost per 1,000 orders processed.
 
-**Actions**
-- Configure and test the approved reporting environment.
-- Move suitable reporting workloads away from production.
-- Establish monitoring for website performance and replication lag where applicable.
-- Introduce the Customer Data Copy Log and documented data-handling procedures.
-- Test backup and recovery procedures.
+Alert thresholds and spending limits require management approval before implementation. Cost optimisation must not compromise essential production operations, required inventory updates, or customer-data protections.
 
-**Verifiable outcomes**
-- Tested reporting environment.
-- Evidence that reporting does not cause unacceptable production impact.
-- Documented inventory-freshness checks.
-- Recorded owners and review dates for known customer-data copies.
-- Documented backup and recovery test results.
+## Success Measures
 
-### Quarter 3: Automate and Validate
+Progress will be measured against baselines established in Q1:
 
-**Actions**
-- Automate priority reporting tasks where practical.
-- Introduce repeatable data-quality checks.
-- Document reporting logic and reconciliation procedures.
-- Compare reporting effort against the Quarter 1 baseline.
-- Assess whether a warehouse or forecasting pilot is justified.
+- Website performance during reporting workloads.
+- Unexplained differences between Operations and Finance reports.
+- Staff hours spent preparing and reconciling reports.
+- Traceability of customer-data copies.
+- Inventory reporting freshness.
+- Pipeline reliability and data-quality failures.
+- Infrastructure cost and cost per 1,000 orders.
 
-**Verifiable outcomes**
-- Repeatable priority reports.
-- Recorded data-quality and reconciliation results.
-- Measured changes in manual reporting effort.
-- Documented assessment of future platform requirements.
+Numerical improvement targets should be agreed after the baseline is measured.
 
-### Quarter 4: Review and Decide
+## Important Limitations
 
-**Actions**
-- Compare performance and reporting outcomes against initial baselines.
-- Review customer-data controls, reporting reliability, and operating costs.
-- Decide whether a warehouse investment is justified.
-- Decide whether a limited demand-forecasting pilot is appropriate.
-- Prepare the following year's improvement plan.
-
-**Verifiable outcomes**
-- Year-end performance review.
-- Documented control and cost review.
-- Written decisions on warehouse and forecasting investments.
-- Prioritised plan for the following year.
-
-## Built Improvement
-
-### Customer Data Copy Tracking and Monday Reporting Controls
-
-This project includes a practical operational improvement addressing two important weaknesses: untracked customer-data copies and inconsistent Monday reporting.
-
-### 1. Customer Data Copy Log
-
-**File:** `improvement/customer_data_copy_log.md`
-
-The Customer Data Copy Log provides a structured record of known customer-data copies, their locations, responsible owners, backup contacts, and last review dates.
-
-It is intended to help Kloud Kart establish better accountability for customer information and support investigations into customer-data requests, including deletion requests.
-
-**Expected benefits**
-- Better visibility of customer-data copies.
-- Clear ownership and responsibility.
-- Easier investigation of customer-data requests.
-- More consistent review of data-handling practices.
-
-### 2. Monday Reporting Checklist
-
-**File:** `improvement/monday_reporting_checklist.md`
-
-The Monday Reporting Checklist provides a repeatable process for preparing, validating, reconciling, and reviewing weekly business reports.
-
-It helps reduce avoidable manual errors and makes it easier to identify differences between Operations and Finance before reports are distributed.
-
-**Expected benefits**
-- More consistent reporting procedures.
-- Earlier detection of missing or inconsistent figures.
-- Clearer responsibility for report preparation and review.
-- Improved confidence in reported business numbers.
-
-### 3. Improvement Documentation
-
-The following supporting files explain the improvement and how it should be used:
-
-- `improvement/improvement.md` documents the problem, proposed solution, and expected benefits.
-- `improvement/README.md` explains the contents of the improvement folder.
-
-### How Success Will Be Verified
-
-The improvement should be reviewed against measurable outcomes:
-
-- Known customer-data copies have recorded owners and backup contacts.
-- Copy records have documented review dates and are updated when circumstances change.
-- Monday reports pass agreed validation checks before distribution.
-- Differences between Operations and Finance are documented and investigated.
-- The team can demonstrate that the procedures are being followed.
-
-**Implementation status:** The repository documents the proposed operational controls and supporting artifacts. Their effectiveness must be confirmed through actual use and review; the documentation alone does not prove that the controls are fully implemented.
-
-## Data Quality and Governance
-
-Reliable reporting requires more than moving data into a separate environment. Kloud Kart must also establish repeatable rules for preparing, validating, accessing, and reviewing data.
-
-### Data Quality Controls
-
-Proposed checks include:
-
-- Identifying duplicate order records.
-- Checking required fields for missing values.
-- Validating order totals and other important business measures.
-- Comparing report totals against agreed source figures.
-- Investigating differences between Operations and Finance.
-- Monitoring inventory freshness and relevant data-transfer delays.
-
-### Customer Data Governance
-
-Proposed controls include:
-
-- Recording known customer-data copies and their owners.
-- Restricting access to authorised personnel.
-- Documenting retention and deletion procedures.
-- Maintaining evidence of relevant customer-data requests and actions.
-- Reviewing procedures against the Ghana Data Protection Act, 2012 (Act 843), with appropriate legal or data-protection guidance where necessary.
-
-These measures are intended to improve accountability and support compliance. They do not, by themselves, establish legal compliance or prove that a particular complaint has been resolved.
-
-## Architecture Decision Records
-
-Architecture Decision Records (ADRs) document important decisions, the alternatives considered, and the reasons for the selected approach.
-
-| ADR | Decision | Rationale |
-|---|---|---|
-| ADR-001 | Separate reporting from production | Reduce the risk that reporting workloads affect the live website. |
-| ADR-002 | Defer warehouse platform | Avoid committing to additional platform costs before requirements and data quality are understood. |
-| ADR-003 | Standardise business reporting | Improve consistency between Operations and Finance. |
-| ADR-004 | Control customer data | Improve visibility, ownership, and handling of customer-data copies. |
-| ADR-005 | Delay demand forecasting | Establish reliable data and reporting processes before introducing predictive models. |
-
-Full decision records are available in the `decisions/` directory.
-
-## Success Metrics
-
-The following measures should be established during Quarter 1 and reviewed throughout implementation.
-
-| Area | Success measure |
-|---|---|
-| Website reliability | Reporting-related slowdowns and production performance measurements |
-| Reporting efficiency | Time required to prepare Monday reports |
-| Reporting consistency | Number and size of unresolved differences between Operations and Finance |
-| Data quality | Number of failed validation checks and unresolved issues |
-| Inventory | Compliance with agreed inventory-freshness requirements |
-| Customer data | Proportion of known copies with recorded owners and current review dates |
-| Cost management | Actual implementation and operating costs compared with the approved budget |
-
-Targets should be agreed after the initial baselines are measured. This avoids presenting unverified improvements as achieved results.
-
-## Risks and Constraints
-
-| Risk or constraint | Proposed response |
-|---|---|
-| Reporting affects the live website | Move suitable reporting workloads to an approved separate environment and monitor performance. |
-| Inventory becomes stale | Define and monitor freshness requirements before changing inventory-related data flows. |
-| Customer-data copies remain untracked | Introduce the copy log, ownership, review procedures, and access controls. |
-| Operations and Finance continue reporting different figures | Agree on definitions, standardise calculations, and introduce reconciliation checks. |
-| Costs grow before benefits are proven | Use staged implementation and require evidence before approving larger investments. |
-| Limited engineering capacity | Prioritise essential controls and automation that can be maintained by the available team. |
-| Forecasting produces unreliable recommendations | Defer predictive modelling until data quality and historical data suitability have been assessed. |
-
-## Repository Structure
-
-```text
-Kloud Kart project/
-├── decisions/
-│   ├── ADR-001-separate-reporting-from-production.md
-│   ├── ADR-002-defer-warehouse-platform.md
-│   ├── ADR-003-standardise-business-reporting.md
-│   ├── ADR-004-control-customer-data.md
-│   └── ADR-005-delay-demand-forecasting.md
-├── improvement/
-│   ├── customer_data_copy_log.md
-│   ├── improvement.md
-│   ├── monday_reporting_checklist.md
-│   └── README.md
-├── Kloud_Kart_Implementation_Roadmap.md
-├── Kloud_Kart_Recommendation.md
-├── Kloud-Kart-Board-Presentation.pptx
-├── README.md
-└── Situation_Diagnosis_Kloud_Kart.md
-```
-
-## Future Direction
-
-Once reporting reliability, data quality, and governance controls have been established, Kloud Kart can evaluate additional capabilities in stages.
-
-Potential future initiatives include:
-
-- A cloud data warehouse such as Snowflake or BigQuery.
-- Automated operational and financial dashboards.
-- More advanced inventory and sales analytics.
-- A carefully scoped demand-forecasting pilot.
-- Improved analytical support for expansion into Nigeria.
-
-Each initiative should be justified by a defined business need, measurable benefits, realistic implementation costs, and the team's capacity to operate it.
-
-## Conclusion
-
-Kloud Kart's immediate priority is to establish a reliable and controlled data foundation while protecting the live website and maintaining fresh inventory information.
-
-By separating reporting from production, standardising business figures, improving customer-data controls, and automating priority reporting tasks, the company can reduce operational risk and prepare for future growth without committing prematurely to expensive analytics platforms.
-
-The roadmap provides a staged, measurable path from investigation to operational improvement and, eventually, evidence-based investment in advanced analytics.
-
----
-
-**Project status:** Assessment, planning, and proposed operational improvements. Production deployment, realised cost savings, and performance improvements must be verified separately before being reported as achieved outcomes.
+This repository contains a proposed strategy and implementation plan. Recommendations, controls, and architecture diagrams describe the intended approach; they must not be interpreted as evidence that the infrastructure has already been deployed or that the identified risks have been fully resolved.

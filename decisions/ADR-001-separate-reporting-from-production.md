@@ -12,7 +12,11 @@ Kloud Kart must keep the website available, maintain current stock counts and wo
 
 ## Decision
 
-Move routine reporting queries and Monday exports to a read replica, provided testing confirms that it protects the live website and meets agreed data freshness requirements. Keep live stock checks on the production database. If a replica cannot meet these requirements, evaluate the pre-approved separate server as the alternative.
+Move routine reporting queries and Monday exports away from the production database to an approved read replica, provided testing confirms that it protects the live website and meets agreed data-freshness requirements. Keep live stock checks and stock reservation on the production database.
+
+The read replica is the immediate workload-isolation measure, while the managed cloud data warehouse is the target analytical reporting layer described in ADR-006. Data should move through controlled extraction into the warehouse rather than allowing routine analytical workloads to compete with live transactions.
+
+If a replica cannot meet the required performance or freshness requirements, evaluate the pre-approved separate server as an alternative. Test replication lag, recovery, access controls, and reporting accuracy before relying on the replica.
 
 ## Alternatives considered
 

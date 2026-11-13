@@ -36,3 +36,7 @@ Defer selecting a full warehouse platform until reporting requirements, data qua
 ## What this survives
 
 The company can improve reporting without committing to a large platform prematurely. If leadership requests a platform decision earlier, compare realistic costs, technical fit, security and support requirements before selecting one.
+
+## Supersession Note
+
+This decision was superseded by ADR-006, which approves a managed data warehouse following the updated assessment. The original decision is retained to preserve the project's decision history.

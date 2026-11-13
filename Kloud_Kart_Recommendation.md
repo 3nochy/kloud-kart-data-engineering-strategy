@@ -1,57 +1,59 @@
-# Kloud Kart: Recommendation
+# Kloud Kart: Data Engineering Recommendation
 
 **Prepared for:** Nana Adjei, Head of Operations  
 **Prepared by:** External Data Consultant  
 **Date:** 13 November 2026
 
-## 1. Recommended Approach
+## 1. Recommendation
 
-Kloud Kart should establish a reliable, secure and cost-controlled data foundation before investing in advanced analytics or machine learning.
+Kloud Kart should establish a small, managed cloud data warehouse supported by controlled extraction, SQL transformations and reliable reporting. At approximately 4,000 orders per day, with around 40 GB of MySQL data and only two planned data hires, a focused warehouse is more appropriate than building a complex lakehouse or machine-learning platform.
 
-The company processes approximately 4,000 orders daily, but reporting workloads share a server with the live website. Operations and Finance produce inconsistent figures, while Marketing exports customer information without tracking copies. These problems create operational, reporting and customer-data risks.
+The priorities are to protect the live website, establish trusted business figures, control customer-data copies and prepare for the anticipated 15–20% annual order growth. This growth assumption should be confirmed with management and used for capacity planning, rather than treated as a guaranteed forecast.
 
-I recommend four priorities: separate reporting from production, standardize reporting, strengthen customer-data controls, and defer major analytics investments until the business case is clear.
+## 2. Proposed Architecture and Data Movement
 
-## 2. What to Implement First
+**Source:** Existing MySQL production database.
 
-### Priority 1: Protect the live website
+**Extraction:** Take an initial consistent snapshot, then use incremental extraction to capture new and changed records. Use reliable change timestamps or keys where available; assess change-data capture if the source cannot support dependable incremental extraction. Track extraction progress, failed loads and duplicate records.
 
-Use the approved second server or a MySQL read replica to move reporting workloads away from the production database. Choose a read replica only if testing confirms that it can handle reporting queries without unacceptable performance or replication delays. Monitor website performance and replication lag. Inventory decisions must continue to use sufficiently current stock information, not a delayed reporting copy.
+**Privacy and storage:** Mask or exclude unnecessary personal identifiers before data enters the analytical landing area. Retain only the raw data needed for approved reporting, with documented access and retention controls. Load the approved data into the warehouse.
 
-### Priority 2: Establish trusted reporting
+**Transformation:** Use SQL inside the warehouse to standardise orders, payments, cancellations, refunds and inventory reporting. Apply validation checks before publishing results.
 
-Agree on shared definitions for orders, revenue, cancellations and refunds with Operations and Finance. Automate the most important Monday reports using repeatable SQL queries and data-quality checks. This should reduce manual reconciliation and make differences easier to explain.
+**Serving:** Provide consistent, documented reporting datasets for Operations and Finance. Automate the highest-priority Monday reports first.
 
-### Priority 3: Strengthen customer-data controls
+This is a **hybrid ELT approach**: protect sensitive fields before analytical storage, load approved source data, then transform it in the warehouse using SQL. Extraction reliability and data protection are essential because loading incomplete or uncontrolled data would reproduce the current problems in a new platform.
 
-Assign an owner to the existing customer-data complaint and document the investigation and response within the applicable 90-day window. Introduce controlled access, traceable customer-list exports, retention rules and a documented deletion process. Review the approach against Ghana’s Data Protection Act, 2012 (Act 843), seeking qualified guidance where necessary. The available facts do not establish whether a legal breach has occurred.
+## 3. Processing Frequency
 
-### Priority 4: Build gradually
+Use scheduled batch processing for orders, payments, customer reporting and other routine management measures. Run ordinary reports daily, with the main Monday report generated from the same approved definitions and validated data.
 
-Start with manageable reporting infrastructure rather than committing immediately to a complex warehouse. Evaluate BigQuery or Snowflake only after requirements, expected benefits and total costs have been assessed. Consider demand forecasting when sales and inventory data are sufficiently reliable.
+The single streaming exception is **inventory stock-count changes**. Assess a change-data-capture mechanism to propagate stock changes to a near-real-time reporting view, with monitoring for delays, duplicate events and recovery after interruptions. The production inventory system remains authoritative for checkout and stock reservation; a delayed reporting view must never be treated as the source of truth for available stock.
 
-## 3. Staffing and Accountability
+## 4. First Implementation Priorities
 
-Use the two available data hires for complementary responsibilities:
+1. **Protect production:** Investigate the two reported website slowdowns. Test the approved second server or a MySQL read replica, compare cost and capacity, and move reporting workloads only after performance, security, backups and recovery have been tested.
+2. **Standardise reporting:** Agree with Finance and Operations on reporting periods and definitions for orders, revenue, payments, cancellations and refunds. Reconcile existing reports before automating them.
+3. **Strengthen personal-data controls:** Assign an owner to the existing customer-data complaint, verify the applicable deadline, inventory known data copies, and document access, retention and deletion procedures. Review these arrangements against Ghana’s Data Protection Act, 2012 (Act 843), seeking qualified guidance where needed. The available facts do not establish that a legal breach has occurred.
+4. **Build incrementally:** Start with the essential warehouse, extraction, transformation, validation and reporting capabilities. Avoid a large platform rollout or forecasting project until the core data is reliable and the business case is demonstrated.
 
-1. **Data Engineer:** builds and maintains data pipelines, separates reporting workloads, monitors data movement and supports reliable data delivery.
-2. **Analytics Engineer or BI Developer:** defines business measures, develops reports, implements data-quality checks and works with Operations and Finance to validate results.
+## 5. Tools, Ownership and Growth
 
-The existing PHP/MySQL developer should support production database changes and application integration. A named business owner should oversee customer-data processes, with specialist advice where necessary.
+Use a small set of tool categories: a managed cloud data warehouse, a controlled extraction or change-data-capture mechanism, SQL transformation and validation, and a reporting interface. Select specific products only after assessing cost, security, compatibility, maintenance and staff capability.
 
-## 4. Measures of Success
+The two planned hires should have complementary responsibilities:
 
-Establish baselines in Q1 and track:
+- **Data Engineer:** extraction, loading, pipeline reliability, infrastructure monitoring and data access controls.
+- **Analytics Engineer or BI Developer:** business definitions, SQL transformations, validation, reconciliation and reporting.
 
-- Reporting-related website slowdowns and website performance.
-- Unexplained differences between Operations and Finance reports.
-- Weekly hours spent preparing and reconciling reports.
-- Traceability of customer exports and deletion activities.
-- Inventory freshness and stock accuracy.
-- Actual infrastructure costs against the approved budget.
+The existing PHP/MySQL developer should support production database changes and application integration. Business owners remain responsible for approving financial definitions and customer-data procedures.
 
-The goal is to eliminate reporting-related website slowdowns, resolve unexplained differences in agreed measures, reduce manual reporting effort and improve customer-data accountability. Set numerical improvement targets after the baseline is measured.
+Plan capacity against the 15–20% annual growth assumption and the possible Nigeria expansion. Review actual volume, query performance, storage, cost and data freshness quarterly. Reassess the design if measured demand exceeds its tested capacity.
 
-## Recommendation
+## 6. Success Measures and Decision Gates
 
-Address the existing customer-data complaint and production-performance risk first. Then standardize and automate priority reports. Defer warehouse selection and demand forecasting until measured results show that the business is ready and the investment is justified.
+Establish Q1 baselines, then track reporting-related website slowdowns, unexplained Operations/Finance differences, staff hours spent preparing reports, customer-data copy traceability, inventory freshness and actual infrastructure costs.
+
+Proceed with broader automation only after reporting definitions are approved and validation checks pass. Consider demand forecasting only when historical sales and inventory data are sufficiently complete and consistent, and management approves measurable pilot objectives.
+
+**Decision:** Establish a controlled, managed warehouse with hybrid ELT, predominantly batch processing and one explicitly scoped streaming exception for inventory stock-count updates. Resolve the immediate customer-data and production-performance risks first, then expand only when measured business needs justify it.

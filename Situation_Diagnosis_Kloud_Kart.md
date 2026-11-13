@@ -1,335 +1,219 @@
-# Situation Diagnosis: Kloud Kart
+# Kloud Kart: Situation Diagnosis
 
 **Prepared for:** Nana Adjei, Head of Operations  
 **Prepared by:** External Data Consultant  
-**Date:** 10 November 2026
+**Date:** 13 November 2026
 
 ## 1. Executive Summary
 
-Kloud Kart has grown to approximately 4,000 orders per day and is preparing to expand into Nigeria. However, its current data practices have not developed at the same pace as the business. The company stores orders, inventory and customer accounts in a single MySQL database on the same server as its live website. Operations and Finance produce different figures from their spreadsheets, Marketing exports customer information without tracking where copies go, and large Monday exports have slowed the website twice in the past month.
+Kloud Kart processes approximately 4,000 orders per day using a production application backed by a MySQL database of approximately 40 GB. Reporting relies on large exports, Operations manually rebuilds Monday figures from CSV files, Finance produces different figures, and Marketing maintains customer-list copies that are not centrally tracked.
 
-These are not separate problems. They point to weaknesses in data ownership, reporting processes, customer information management and the separation of business reporting from live operations.
+The main problem is not simply a lack of analytics tools. Kloud Kart lacks sufficient separation between operational and analytical workloads, consistent business definitions, reliable reporting controls, and visibility over where customer data is copied.
 
-The four findings are ranked below according to their potential impact on the business, customers and the board's ability to make informed decisions.
+Two website slowdowns occurred during Monday exports last month. Their precise technical cause has not yet been verified, so the exports should be treated as a plausible contributor requiring investigation, not as the confirmed root cause.
 
-1. **Uncontrolled customer data and deletion processes.** The absence of reliable tracking of exported customer lists creates privacy and compliance risks, particularly given the existing complaint concerning deleted customer data.
-2. **Reporting activity affecting the live website.** Large exports compete with the live application for shared server resources, creating a risk to customer experience and sales.
-3. **Inconsistent business reporting.** Different figures from Operations and Finance weaken confidence in business performance reports and decisions.
-4. **Time-consuming manual reporting.** Repeated exports and spreadsheet preparation consume staff time and make reporting difficult to scale.
+**My recommendation is to:**
 
-Kloud Kart should address these operational risks before investing in complex analytics or machine learning. The immediate priority is to establish control over customer information, protect the live website, and produce consistent business figures using a controlled reporting process.
+1. Investigate and contain customer-data handling risks.
+2. separate reporting workloads from the production application.
+3. establish one agreed definition for revenue and other core business measures.
+4. build a small managed cloud data warehouse with controlled extraction, predominantly daily batch processing, and a narrowly scoped near-real-time inventory exception.
+5. automate reporting checks before expanding into forecasting or more advanced analytics.
 
-The cost figures in this report are illustrative planning estimates. The case does not provide actual staff rates, the duration of website slowdowns, average order value or confirmed financial losses. These assumptions are stated explicitly so management can replace them with verified figures.
+For capacity planning, I assume annual order volume could grow by 15–20%. This is a planning assumption to validate with management, not a confirmed forecast.
 
-## 2. Root Causes Ranked by Business Risk
+## 2. Current Situation and Root Causes
 
-### 2.1 Uncontrolled Customer Data and Deletion Processes
+| Observed situation | Likely underlying cause | Business consequence |
+|---|---|---|
+| Website slowdowns occurred twice during Monday exports | Reporting queries and large exports may compete with live application workloads for database resources | Potentially slower customer experience and operational disruption |
+| Operations and Finance report different figures | Business definitions, extraction times, filters, or treatments of cancellations and refunds may differ | Decisions and financial discussions are harder to reconcile |
+| Marketing maintains customer-list copies without central tracking | No complete register of personal-data copies or consistently enforced handling process | Customer requests may not reach every relevant copy |
+| Operations rebuilds Monday reports from CSVs | Reporting depends on manual steps rather than a controlled, repeatable pipeline | Staff time is consumed and errors are harder to detect |
+| Inventory information can become stale in reports | Regular batch reporting alone may not reflect the latest stock changes | Staff may make decisions using outdated stock information |
+| Investors are asking about real-time analytics and forecasting | The business wants more advanced insight before its foundational data controls are fully established | Risk of spending on complexity before basic reporting is dependable |
 
-**Risk ranking: First**
+These are working diagnoses. Database monitoring, query analysis, export logs, report comparisons, and a customer-data copy review are required to confirm the technical and operational causes.
 
-**What is happening**
+## 3. Ranked Risks
 
-Marketing exports a customer list containing approximately 300,000 people, but the company does not track how many copies are created or where those copies are stored. Kloud Kart has also received a complaint concerning deleted customer data and has a 90-day response window.
+### Risk 1: Uncontrolled customer-data copies and deletion requests
 
-**Root cause**
+**Priority: Critical to investigate promptly**
 
-The company lacks a sufficiently controlled process for managing customer information throughout its lifecycle. The problem is not simply that Marketing exports lists. It is that the company cannot reliably demonstrate where exported information goes, who has access to it, how long copies are retained, or whether deletion has been completed across relevant systems and copies.
+Marketing maintains untracked customer-list copies, and a customer has raised a complaint concerning deleted customer data. The available information does not establish that a legal breach occurred or prove exactly how the deletion was handled.
 
-This creates uncertainty when the company needs to investigate a complaint, demonstrate accountability or confirm that customer information has been handled appropriately.
+The underlying control weakness is that the organisation may not have a complete view of where customer data exists, who owns each copy, and how a request is propagated to relevant systems.
 
-**Business and compliance impact**
-
-Under Ghana's Data Protection Act, 2012 (Act 843), organizations must take their responsibilities for personal data seriously. The facts provided are not enough to determine whether Kloud Kart has breached the law. However, the untracked exports and existing complaint create a clear reason to review its data-handling practices urgently.
-
-The company could also lose customer trust if it cannot explain how personal information is accessed, retained or deleted.
-
-**Illustrative cost estimate**
-
-Assume the initial investigation and response require 60 staff hours, valued at GH₵150 per hour.
-
-**60 hours × GH₵150 = GH₵9,000**
-
-This is an estimated staff-time cost for planning purposes. Neither the 60 hours nor the hourly rate is provided by the case. The amount is not a regulatory penalty, legal-fee quotation or confirmed loss.
-
-The actual cost could be higher or lower depending on the scope of the complaint, the records available and the work required to investigate it.
+**Potential impact**
+- Delayed or incomplete handling of the customer's request.
+- Difficulty demonstrating what action was taken and when.
+- Unnecessary retention or access to personal information.
+- Staff time spent searching for copies and reconstructing events.
 
 **Recommended action**
+- Assign a named complaint owner and verify the applicable response deadline and requirements.
+- Document the request, its dates, the actions taken, and supporting evidence.
+- Inventory relevant locations, including production MySQL, exports, spreadsheets, emailed files, reporting stores, and backups.
+- Identify owners, access controls, retention rules, and approved deletion or restriction procedures for each location.
+- Verify and document completion rather than assuming that deleting the production record removes every copy.
 
-Immediately assign responsibility for the complaint and establish a documented response plan within the available 90-day window. Identify the relevant customer records, export locations, access permissions and deletion history. Preserve relevant evidence and document the investigation.
+**Cost exposure:** An illustrative investigation estimate is 60 staff-hours at GH₵150 per hour, or **GH₵9,000 in one-off staff time**. This is an assumption for planning, not a confirmed expense, fine, or estimate of legal liability.
 
-Marketing should use controlled access to customer information, with a record of authorized exports, their purpose and their retention or deletion. Deletion requests should have a documented process for identifying relevant copies and recording the outcome.
+As I understand Ghana's Data Protection Act, 2012 (Act 843), personal-data handling must be assessed against applicable obligations. The organisation should confirm the legal requirements with its responsible privacy lead or qualified adviser. This diagnosis does not conclude that a breach has occurred.
 
-Management should seek appropriate data-protection or legal guidance where the complaint requires it.
+### Risk 2: Reporting may affect production performance
 
-**How success will be measured**
+**Priority: High**
 
-The complaint has an assigned owner, an evidence-based response plan and documented progress. Relevant customer-data locations and access permissions are identified, and customer-data exports and deletion activities can be traced.
+Large Monday exports may compete with live application activity. However, the two observed slowdowns do not prove that exports caused them.
 
-### 2.2 Reporting Activity Affects the Live Website
-
-**Risk ranking: Second**
-
-**What is happening**
-
-The website and the MySQL database share the same server. Twice last month, a Monday export slowed the live website to a crawl.
-
-**Root cause**
-
-The reporting process competes with the live application for server resources. Large queries and exports can consume database processing capacity, memory, storage activity and network resources that the website also needs to serve customers.
-
-The deeper problem is the lack of separation between operational workloads and reporting workloads.
-
-**Business impact**
-
-Website slowdowns can delay customer orders, reduce confidence in the shopping experience and place additional pressure on the development team. As Kloud Kart expands, this shared arrangement could become increasingly difficult to manage.
-
-The two incidents establish that the problem has occurred, but they do not establish how many orders were lost or how much revenue was affected.
-
-**Illustrative cost estimate**
-
-The following calculation estimates possible gross sales exposure during the two reported incidents. It is a scenario, not a measurement of confirmed lost sales.
-
-For planning purposes, assume the following:
-
-1. Kloud Kart receives 4,000 orders per day.
-2. The business operates across 16 active trading hours per day.
-3. Each slowdown lasts 45 minutes.
-4. Ten percent of the orders expected during each slowdown window are not completed at that time.
-5. The average order value is GH₵150.
-
-**Step 1: Estimate orders per trading hour**
-
-4,000 orders ÷ 16 hours = 250 orders per hour
-
-**Step 2: Estimate orders during a 45-minute slowdown**
-
-45 minutes ÷ 60 minutes = 0.75 hours
-
-250 orders × 0.75 hours = 187.5 expected orders
-
-**Step 3: Estimate potentially affected orders**
-
-187.5 orders × 10% = 18.75 potentially affected orders per incident
-
-**Step 4: Estimate gross sales exposure**
-
-18.75 orders × GH₵150 = GH₵2,812.50 per incident
-
-GH₵2,812.50 × 2 incidents = **GH₵5,625 across the two incidents**
-
-This estimate depends entirely on the stated assumptions. The case does not confirm that either slowdown lasted 45 minutes, that 10% of orders failed, or that the average order value was GH₵150.
-
-The figure represents illustrative gross sales exposure, not confirmed lost revenue or lost profit. Some customers may have completed their orders later, and the actual impact may differ considerably.
+**Potential impact**
+- Slower browsing or checkout.
+- Lost or delayed orders.
+- Reduced confidence in the reliability of the platform.
 
 **Recommended action**
+- Review database logs, query plans, resource utilisation, export timing, and application monitoring around both incidents.
+- Establish a baseline for website response time, checkout performance, and database load.
+- Test a separate reporting environment, such as an approved read replica, before moving reporting workloads.
+- Monitor replication lag and confirm that recovery and access controls work as expected.
+- Keep the production database authoritative for checkout, stock reservation, and order processing.
 
-Move reporting workloads away from the live website and its production database. The company has already approved a second server or read replica, making separation a practical early improvement.
+A reporting replica reduces contention risk but does not guarantee that every performance issue will disappear. Its effect must be measured.
 
-A read replica could reduce reporting pressure on the production database, although replication lag and resource limits would still need to be monitored. Management should also review the most expensive reporting queries and schedule large exports appropriately.
+### Risk 3: Operations and Finance report inconsistent figures
 
-**How success will be measured**
+**Priority: High**
 
-Routine reporting no longer causes the same observed website slowdowns. Website response times and database performance are monitored, and any reporting-related incidents can be identified and investigated.
+Operations rebuilds Monday numbers from CSVs, while Finance reports different figures. The exact cause of the mismatch is not yet known.
 
-### 2.3 Operations and Finance Produce Different Figures
+Possible causes include different definitions of revenue, inconsistent reporting cut-off times, duplicate or missing records, inconsistent treatment of cancellations and refunds, and manual spreadsheet changes.
 
-**Risk ranking: Third**
-
-**What is happening**
-
-Every Monday, Nana rebuilds business figures from CSV exports, but Finance's spreadsheet does not match hers.
-
-**Root cause**
-
-The company lacks a consistently governed reporting process with agreed definitions, calculation rules and a common source for business figures. Different spreadsheets may use different filters, reporting periods, adjustments or calculation methods.
-
-The case does not establish which spreadsheet is correct. It would therefore be premature to assume that either Operations or Finance is responsible for the discrepancy.
-
-**Business impact**
-
-Management cannot confidently explain the differences between reports. This weakens decision-making and creates additional work whenever figures must be reconciled.
-
-As the company expands into Nigeria, inconsistencies could become more difficult to investigate if new reporting processes and definitions are introduced without agreement.
-
-**Illustrative cost estimate**
-
-Assume Finance spends two hours each week reconciling figures, across 50 working weeks per year, at an estimated staff-time value of GH₵60 per hour.
-
-2 hours × 50 weeks × GH₵60 = **GH₵6,000 per year**
-
-The two hours and the hourly rate are assumptions, not case facts. This estimates the value of staff time spent on reconciliation. It does not establish a confirmed cash loss.
+**Potential impact**
+- Decisions based on conflicting figures.
+- Time spent reconciling reports.
+- Reduced confidence in management and investor reporting.
 
 **Recommended action**
+- Agree a business definition for each core metric before automating it.
+- Define revenue explicitly: for example, whether the measure is based on orders placed, payments received, or fulfilled orders, and how cancellations, refunds, and failed payments are treated.
+- Standardise the reporting period, time zone, filters, and source records.
+- Compare the agreed report with Operations and Finance outputs and investigate differences before publication.
+- Record the owner and version of each approved definition.
 
-Operations and Finance should agree on definitions for key measures such as orders, revenue, completed orders, cancellations and refunds. The reporting period and treatment of adjustments should also be consistent.
+A shared warehouse will not resolve inconsistent figures unless the underlying business definitions and transformation rules are agreed.
 
-Kloud Kart should establish a controlled reporting dataset and use the same documented calculations for both departments. The first version can use straightforward SQL queries and a repeatable reporting process rather than introducing a complex analytics platform immediately.
+### Risk 4: Manual reporting consumes staff time
 
-**How success will be measured**
+**Priority: Medium to high**
 
-Operations and Finance use the same definitions and reporting period. Any remaining differences can be traced to documented adjustments or identified data-quality issues instead of unexplained spreadsheet variations.
+Repeated CSV exports, spreadsheet processing, and manual reconstruction make reporting slower and harder to reproduce.
 
-### 2.4 Manual Reporting Consumes Staff Time
-
-**Risk ranking: Fourth**
-
-**What is happening**
-
-Nana relies on manual CSV exports and spreadsheet work to prepare the Monday figures.
-
-**Root cause**
-
-The reporting process depends too heavily on individual effort rather than a repeatable and documented procedure. The business has not established a reliable reporting workflow that can produce the required figures consistently.
-
-This creates a dependency on manual work and makes the process difficult to scale as order volumes increase.
-
-**Business impact**
-
-Time that could be spent investigating operational problems and improving performance is instead spent collecting, checking and rebuilding numbers.
-
-The current process also makes reporting vulnerable to inconsistent filters, accidental spreadsheet changes and differences in how staff prepare their figures.
-
-**Illustrative cost estimate**
-
-Assume Nana spends four hours preparing the report each Monday, across 50 working weeks per year, with an estimated staff-time value of GH₵100 per hour.
-
-4 hours × 50 weeks × GH₵100 = **GH₵20,000 per year**
-
-The four hours and the hourly rate are assumptions. The figure estimates the value of Nana's time, not a confirmed cash saving that the company would automatically realize by automating the process.
+**Potential impact**
+- Staff time diverted from operational work.
+- Repeated manual errors.
+- Delayed access to trusted management information.
 
 **Recommended action**
+- Document the current Monday reporting process.
+- Automate the highest-value reports after metric definitions have been agreed.
+- Add automated quality checks to each data load.
+- Retain reconciliation evidence and a clear process for investigating failures.
 
-Document the existing Monday reporting process, agree on the required measures and automate the repeatable extraction and calculation steps. Start with the reports that Operations and Finance use most frequently.
+Automation should follow a validated manual process rather than reproduce inconsistent calculations at greater speed.
 
-The process should include basic checks for missing records, duplicate orders and unexpected changes in totals. Nana should receive an understandable report with clear definitions rather than needing to rebuild the figures herself.
+### Risk 5: Inventory reporting may be stale
 
-**How success will be measured**
+**Priority: High for inventory-dependent decisions**
 
-The Monday report can be generated using a repeatable process, the time required to prepare it decreases, and Nana can explain the reported figures without manually rebuilding them.
+Daily batch reporting is suitable for many management metrics, but inventory changes may require more frequent updates. A reporting copy must not be treated as the authoritative stock record for checkout.
 
-## 3. Overall Financial Assessment
+**Potential impact**
+- Decisions made using outdated availability information.
+- Increased risk of stock discrepancies and customer dissatisfaction.
 
-The estimates in this diagnosis demonstrate why Kloud Kart should investigate the problems rather than assume that they have no cost.
+**Recommended action**
+- Keep stock reservation and checkout decisions on the operational system.
+- Assess a controlled change-data-capture process to update an inventory reporting view near real time.
+- Monitor update delay, duplicates, failures, and recovery.
+- Display the latest update time so users can judge the freshness of reported stock.
 
-The illustrative figures are:
+## 4. Illustrative Cost and Exposure Estimates
 
-1. **Customer complaint investigation:** GH₵9,000 in assumed staff time for a one-off investigation.
-2. **Website slowdown scenario:** GH₵5,625 in estimated gross sales exposure across the two reported incidents.
-3. **Finance reconciliation:** GH₵6,000 in assumed annual staff time.
-4. **Manual reporting:** GH₵20,000 in assumed annual staff time.
+The following estimates indicate the potential scale of the problem. The assumptions must be validated before these figures are used as budgets, savings commitments, or evidence of actual loss.
 
-These figures must not be presented to the board as confirmed losses or added together as if they represent a verified annual financial impact.
+| Item | Calculation | Illustrative estimate |
+|---|---|---:|
+| Customer-data investigation | 60 hours × GH₵150/hour | GH₵9,000 one-off staff time |
+| Finance reconciliation | 2 hours/week × 50 weeks × GH₵60/hour | GH₵6,000/year |
+| Manual reporting | 4 hours/week × 50 weeks × GH₵100/hour | GH₵20,000/year |
+| Potential gross sales exposure during slowdowns | See scenario below | GH₵5,625 across two incidents |
 
-The estimates cover different types of exposure and different time periods. The complaint estimate is a one-off planning scenario, the website estimate concerns two reported incidents, and the reconciliation and reporting estimates represent assumed annual staff-time values. The estimates also depend on unverified rates and durations.
+### Slowdown scenario calculation
 
-The immediate financial task is to replace these assumptions with evidence. Kloud Kart should record actual time spent preparing and reconciling reports, measure the duration and performance impact of website slowdowns, and verify average order value and order-completion data before claiming lost sales.
+Assumptions requiring validation:
+- 4,000 orders per day.
+- 16 active trading hours per day.
+- Each slowdown lasted 45 minutes.
+- 10% of orders in the affected period were potentially affected.
+- Average order value was GH₵150.
+- Two incidents occurred.
 
-This approach provides a defensible starting point for prioritizing improvements without overstating the financial case.
+Calculation:
 
-## 4. Data Protection and the 90-Day Complaint
+1. Estimated orders per active hour: 4,000 ÷ 16 = 250.
+2. Estimated orders during 45 minutes: 250 × 0.75 = 187.5.
+3. Potentially affected orders under the 10% assumption: 187.5 × 10% = 18.75.
+4. Illustrative gross sales exposure per incident: 18.75 × GH₵150 = GH₵2,812.50.
+5. Across two incidents: GH₵2,812.50 × 2 = **GH₵5,625**.
 
-The complaint concerning deleted customer data requires specific attention because the company has a stated 90-day response window and does not currently track customer-list exports reliably.
+This is a scenario-based estimate of gross sales exposure, **not confirmed lost revenue**. It does not establish that any orders were lost, that all affected orders would have completed, or that the assumed duration, affected proportion, and average order value are accurate.
 
-The available facts do not establish exactly what information was deleted, which systems or copies were involved, what the complainant has requested, or whether a legal breach has occurred. These details must be investigated rather than assumed.
+The staff-time estimates and slowdown scenario describe different cost categories. They should not be added together and presented as confirmed financial loss. Likewise, estimated time released through automation is not automatically a cash saving.
 
-Kloud Kart should take the following action immediately:
+## 5. Data Quality: Six Dimensions and Required Checks
 
-1. Assign a responsible person to coordinate the complaint and maintain a record of actions and deadlines.
-2. Identify the relevant customer records, systems, exports and known copies.
-3. Review available access records, deletion records and other relevant evidence.
-4. Document the findings and the steps taken to investigate and respond.
-5. Review the company's customer-data handling procedures against its obligations under Ghana's Data Protection Act, 2012 (Act 843).
-6. Seek qualified guidance where necessary and ensure that the response is prepared within the applicable deadline.
+Every data load should be checked before its results are published.
 
-The company should not claim that customer data has been fully deleted until the relevant systems and copies have been checked to the extent reasonably possible and the outcome documented.
+| Dimension | What it means for Kloud Kart | Example check |
+|---|---|---|
+| Completeness | Required records and fields are present | Compare extracted order counts with source counts; flag missing order IDs |
+| Accuracy | Values correctly represent the source transaction | Reconcile sampled order totals against the source system |
+| Consistency | Related reports use the same definitions and rules | Reconcile revenue totals across Operations and Finance using agreed cancellation and refund rules |
+| Timeliness | Data arrives within the agreed reporting window | Record load completion time and inventory update delay |
+| Validity | Values follow accepted formats and business rules | Validate status values, timestamps, amounts, and required fields |
+| Uniqueness | Records are not unintentionally duplicated | Check duplicate order IDs and duplicate source change events |
 
-Longer term, Kloud Kart needs clear ownership of customer information, controlled access, traceable exports and a repeatable process for responding to deletion requests. These controls are more urgent than building advanced analytics because they address an existing complaint and a current weakness in the handling of personal information.
+Failed checks should create a visible exception, identify an owner, and prevent unreliable outputs from being silently published. Thresholds should be agreed with the relevant business owners and adjusted using observed baselines.
 
-## 5. Recommended Direction for Kloud Kart
+## 6. Recommended Direction
 
-The diagnosis supports a practical direction rather than an immediate investment in a large analytics platform.
+Kloud Kart should establish a small, managed cloud data warehouse, with reporting separated from production and a controlled hybrid ELT pipeline.
 
-First, stabilize the existing environment by separating reporting activity from the live website and reviewing the queries that create the greatest pressure.
+- **Extraction:** Begin with a consistent initial snapshot, then use incremental extraction. Assess change-data capture if reliable incremental extraction cannot be achieved with available source fields.
+- **Transformation:** Apply approved SQL transformations and business definitions in the warehouse.
+- **Personal data:** Exclude or mask unnecessary identifiers before analytical landing where feasible, and apply access and retention controls to any approved raw data that must be retained.
+- **Refresh strategy:** Use daily batch processing for ordinary management reporting. Treat inventory stock-count updates as the one specifically scoped near-real-time exception.
+- **Publication:** Validate data before reports are made available.
+- **Capacity planning:** Test the architecture against a provisional 15–20% annual order-growth assumption and review actual volume, performance, and cost regularly.
 
-Second, establish consistent reporting definitions and a repeatable process for producing the figures used by Operations and Finance.
+The two planned data hires should have clear responsibilities: a Data Engineer to own extraction, pipeline reliability, and data controls; and an Analytics Engineer or BI Developer to own metric definitions, transformations, reconciliation, and business reporting. The PHP/MySQL developer should remain involved in changes affecting the production application.
 
-Third, introduce appropriate controls for customer information, including access, export tracking, retention and deletion.
+## 7. Immediate Actions and Ownership
 
-Finally, build the reporting foundation gradually so the company can introduce broader analytics and eventually evaluate demand forecasting when the underlying data is reliable enough.
+| Action | Accountable owner | Evidence of completion |
+|---|---|---|
+| Confirm the customer-data complaint owner and applicable deadline | Nana / designated privacy or compliance owner | Recorded owner, dates, and action log |
+| Inventory customer-data copies and document their owners | Designated data owner with Marketing and IT | Completed copy register with unresolved locations flagged |
+| Investigate both slowdown incidents | PHP/MySQL developer with Data Engineer | Findings based on logs, monitoring, and query analysis |
+| Agree revenue and order definitions | Nana with Finance and Operations | Approved metric definitions and reconciliation rules |
+| Baseline reporting time, discrepancies, performance, and data freshness | Data Engineer with Operations and Finance | Recorded baseline measures |
+| Test separation of reporting from production | Data Engineer and PHP/MySQL developer | Documented performance, replication-lag, and recovery test results |
+| Approve warehouse, extraction, and access-control design | Management with the two data hires | Approved architecture and implementation plan |
 
-This approach fits the company's current constraints. Kloud Kart has only two data hires available this financial year, its existing developer is experienced in PHP and MySQL, and the company has not yet established a professional data engineering function. The initial solution should therefore be manageable by the team, with specialist support where required.
+## 8. Conclusion
 
-The choice of warehouse technology should follow the reporting and operational requirements. Snowflake and BigQuery may be reasonable future options, but selecting either before establishing the core requirements could create unnecessary cost and complexity. A modest, well-controlled reporting foundation is the most defensible first step.
+Kloud Kart's immediate need is a dependable, controlled data foundation—not a complex analytics platform built ahead of business requirements. Customer-data handling, production performance, and inconsistent reporting should be addressed first. A small managed warehouse, agreed business definitions, automated quality checks, daily batch processing, and a narrowly scoped near-real-time inventory feed provide a proportionate path forward.
 
-Stock counts are the exception to the otherwise daily reporting requirement. Any future design must preserve sufficiently fresh inventory information rather than treating all data as suitable for a daily refresh.
-
-## 6. Decisions and Assumptions
-
-Nana is unavailable for follow-up questions, so the diagnosis makes provisional decisions based on the available facts.
-
-**Decision 1: Protect the production website before expanding analytics.**  
-The two reported slowdowns provide direct evidence of an operational risk. Reporting workloads should be separated from production as an early priority.
-
-**Decision 2: Address the customer-data complaint immediately.**  
-The complaint has a stated response window, and the company lacks adequate visibility into customer-list copies. Investigation and documented controls should begin without waiting for a new data platform.
-
-**Decision 3: Establish shared reporting definitions before building more dashboards.**  
-A new dashboard will not resolve disagreements if Operations and Finance continue to use different definitions or calculations.
-
-**Decision 4: Delay advanced forecasting until the reporting foundation is reliable.**  
-Demand forecasting may be useful in the future, but its value depends on reliable historical data, clear business measures and a process for checking forecast performance.
-
-The following assumptions remain unverified:
-
-1. The actual duration and business impact of the two website slowdowns.
-2. The average order value and proportion of orders affected during those incidents.
-3. The actual time Operations and Finance spend preparing and reconciling reports.
-4. The staff-time rates used in the illustrative calculations.
-5. The number and locations of exported customer-list copies.
-6. The exact scope and facts of the customer-data complaint.
-7. The existing database performance limits, replication requirements and infrastructure costs.
-
-These assumptions should be replaced with measured evidence as the work progresses. They should not be treated as established facts in a board discussion.
-
-## 7. Priority Actions
-
-**Immediate priority**
-
-Assign ownership of the customer-data complaint, begin the investigation and document the response plan. Review the reporting activity associated with the website slowdowns and identify the queries responsible.
-
-**Stabilization priority**
-
-Move large reporting workloads away from the production environment using the approved infrastructure option. Introduce monitoring for website and database performance.
-
-**Reporting improvement priority**
-
-Agree on common definitions with Operations and Finance. Document the current reporting process and create a repeatable version of the most important Monday reports.
-
-**Control and review priority**
-
-Introduce traceable customer-data exports and documented deletion procedures. Review the measured results to confirm whether the changes have reduced reporting effort, improved consistency and protected website performance.
-
-These actions establish the immediate direction. Their detailed quarterly schedule, staffing plan and delivery measures should be developed as part of the recommendation and roadmap work.
-
-## 8. Discovery Questions for Validation
-
-The following questions should be answered during implementation to replace assumptions with evidence.
-
-1. What specifically caused each of the two website slowdowns, how long did each last, and what did the monitoring records show?
-2. Which measures differ between the Operations and Finance reports, and what definitions or calculation steps explain the differences?
-3. How much time does each team spend exporting, preparing and reconciling the Monday reports?
-4. Where are customer-list exports stored, who can access them, and what process is currently used to handle deletion requests?
-5. What does the existing customer-data complaint concern, what evidence is available, and what actions are needed to prepare an appropriate response within the 90-day window?
-6. What level of inventory freshness is required operationally, and how can it be maintained if reporting workloads are moved to a separate environment?
-
-These questions are not a reason to delay urgent action. They identify the evidence required to refine the plan and make subsequent investment decisions defensible.
-
-## 9. Conclusion
-
-Kloud Kart's immediate challenge is not a lack of advanced analytics. It is that its existing data processes are creating operational risk, inconsistent business reporting and uncertainty around customer information.
-
-The most defensible response is to address the customer-data complaint, protect the live website from reporting workloads, establish shared reporting definitions and reduce dependence on manual spreadsheet preparation.
-
-The cost calculations provide an initial basis for understanding the potential impact, while making clear where evidence is missing. As those assumptions are verified, management will be better positioned to evaluate investment choices and demonstrate that its data strategy addresses real business needs.
-
-The priority is to establish reliable, controlled and maintainable data practices before expanding into more complex analytics.
+Success should be measured through evidence: fewer unexplained report differences, reduced manual reporting effort, improved production performance, traceable customer-data copies, timely inventory updates, and controlled infrastructure costs. Baselines should be established before numerical improvement targets are promised.
